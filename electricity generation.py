@@ -14,7 +14,7 @@ st.set_page_config(
 # ----- CONSTANTS -----
 
 
-DATA_PATH = "data/HDF_calckWh_sample_clean.xlsx"
+DATA_PATH = "data/HDF_calckWh_10018112406_19-07-2026.csv"
 
 MPRN_COL = "MPRN"
 METER_SERIAL_NUMBER = "Meter Serial Number"
