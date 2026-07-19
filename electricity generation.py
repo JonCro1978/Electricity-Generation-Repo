@@ -3,18 +3,15 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-
-# Setting up the title page 
-
+# ----- PAGE CONFIG -----
 
 st.set_page_config(
     page_title="Solar Dashboard",
     page_icon="☀️",
-    layout="wide"
+    layout="wide",
 )
 
-#setting the data frame and to columns to be read & the totals 
-
+# ----- CONSTANTS -----
 
 DATA_PATH = r"C:\Users\unake\Downloads\HDF_calckWh_10018112406_19-07-2026.csv"
 
@@ -22,81 +19,74 @@ MPRN_COL = "MPRN"
 METER_SERIAL_NUMBER = "Meter Serial Number"
 TOTAL_READ_COL = "Read Value"
 READ_TYPE_COL = "Read Type"
-DATE_COLUMN = "Read Date and End Time"
+DATE_COLUMN = "Read Date and End Time"  # this must match the CSV header exactly
 
-# Loadin the data to the cache, so that the app does not re-read the app every time the app re-runs 
-#removal of unwanted spaces from the colums 
-#tidying up the date field to datetime type to extract hour, month and year
+# ----- DATA LOADING & TRANSFORM -----
 
 @st.cache_data
 def load_data():
     df = pd.read_csv(DATA_PATH)
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # remove spaces around column names
+
+    # parse datetime
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
 
-    # Create a Total column
-    
-    #import stays positive 
-  df["Import_kWh"] = np.where(
-    df["READ_TYPE_COL"] == "Active Import Interval kWh",
-    df["TOTAL_READ_COL"],
-    0,
-)
+    # Import stays positive
+    df["Import_kWh"] = np.where(
+        df[READ_TYPE_COL] == "Active Import Interval kWh",
+        df[TOTAL_READ_COL],
+        0,
+    )
 
-#export becomes negative
-df["Export_kWh"] = np.where(
-    df["READ_TYPE_COL"] == "Active Export Interval kWh",
-    -df["TOTAL_READ_COL"],
-    0,
-)
+    # Export becomes negative
+    df["Export_kWh"] = np.where(
+        df[READ_TYPE_COL] == "Active Export Interval kWh",
+        -df[TOTAL_READ_COL],
+        0,
+    )
 
-df["Total_kWh"] = df["Import_kWh"] + df["Export_kWh"]
+    # Net import - export
+    df["Total_kWh"] = df["Import_kWh"] + df["Export_kWh"]
 
-return df
+    return df
 
 data = load_data()
 
-# Titles
+# ----- TITLES & HEADER METRICS -----
 
 st.title("Solar PV Dashboard ☀️")
 st.metric("Solar Generation (kWh)", 1234, delta="+12%", help="Today's PV output ☀️")
-st.write("Panel status 🌞🔆") 
+st.write("Panel status 🌞🔆")
 
-
-# Checkbox to show hide raw data frame
-
-
+# Raw data toggle
 if st.checkbox("Show Raw Data"):
-    st.write(data)
+    st.dataframe(data)
 
-
-# Setting the page up into 3 columns on the first row to show the widgets and labeling same 
-
+# Metrics row
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric("Total Import Records", len(data))
-col2.metric("Total Import", f"{int(data['Import_kWh'].sum()):,}")
-col3.metric("Total Export", f"{int(data['Export_kWh'].sum()):,}")
-col4.metric("Average Import Interval (KWh)", round(data["Import_kWh"].mean(), 3))
-
-#First divider - mid section 
+col1.metric("Total Records", len(data))
+col2.metric("Total Import (kWh)", f"{data['Import_kWh'].sum():,.1f}")
+col3.metric("Total Export (kWh)", f"{data['Export_kWh'].sum():,.1f}")
+col4.metric("Avg Interval Import (kWh)", round(data["Import_kWh"].mean(), 3))
 
 st.divider()
 
-# Hourly average code, setting hourly group and datetime to hour, creating average 
+# ----- HOURLY IMPORT / EXPORT -----
 
 data["Hour"] = data[DATE_COLUMN].dt.hour
 
 hourly_import = (
-    data.groupby("hour")["Import_kWh"]
+    data.groupby("Hour")["Import_kWh"]
     .mean()
     .reset_index()
 )
 
 hourly_export = (
-    data.groupby("hour")["Export_kWH"]
-
-#Plotly express creating the bar chart
+    data.groupby("Hour")["Export_kWh"]
+    .mean()
+    .reset_index()
+)
 
 fig_hourly_import = px.bar(
     hourly_import,
@@ -114,15 +104,16 @@ fig_hourly_export = px.bar(
     labels={"Hour": "Hour of Day", "Export_kWh": "Average Export (kWh)"},
 )
 
-col_left, col_right = st.columns(2)
-with col_left:
+col_hi_1, col_hi_2 = st.columns(2)
+with col_hi_1:
     st.plotly_chart(fig_hourly_import, use_container_width=True)
-with col_right:
+with col_hi_2:
     st.plotly_chart(fig_hourly_export, use_container_width=True)
 
-# ----- DAILY IMPORT / EXPORT (GROUP BY DATE) -----
+st.divider()
 
-# Create a pure date column from datetime
+# ----- DAILY IMPORT / EXPORT -----
+
 data["Date"] = data[DATE_COLUMN].dt.date
 
 daily_import = (
@@ -153,10 +144,16 @@ fig_daily_export = px.bar(
     labels={"Date": "Date", "Export_kWh": "Export (kWh)"},
 )
 
+col_di_1, col_di_2 = st.columns(2)
+with col_di_1:
+    st.plotly_chart(fig_daily_import, use_container_width=True)
+with col_di_2:
+    st.plotly_chart(fig_daily_export, use_container_width=True)
 
-# ----- MONTHLY IMPORT / EXPORT (GROUP BY MONTH) -----
+st.divider()
 
-# Create a year-month label for grouping
+# ----- MONTHLY IMPORT / EXPORT -----
+
 data["Month"] = data[DATE_COLUMN].dt.to_period("M").astype(str)
 
 monthly_import = (
@@ -187,8 +184,15 @@ fig_monthly_export = px.bar(
     labels={"Month": "Month", "Export_kWh": "Export (kWh)"},
 )
 
+col_mo_1, col_mo_2 = st.columns(2)
+with col_mo_1:
+    st.plotly_chart(fig_monthly_import, use_container_width=True)
+with col_mo_2:
+    st.plotly_chart(fig_monthly_export, use_container_width=True)
 
-# ----- MONTHLY NET IMPORT/EXPORT LINE CHART -----
+st.divider()
+
+# ----- MONTHLY IMPORT / EXPORT / NET LINE -----
 
 monthly_net = (
     data.groupby("Month")[["Import_kWh", "Export_kWh", "Total_kWh"]]
@@ -203,73 +207,6 @@ fig_import_export_line = px.line(
     title="Monthly Import / Export / Net (kWh)",
     labels={"Month": "Month", "value": "kWh", "variable": "Series"},
 )
-#Code for plotly 
-
-#East vs West line graph
-#Grouped data by data column by datetime hour, east and west sidewalk data sets
-
-importexport = (
-    data.groupby(data[DATE_COLUMN].dt.month)[[Import_kWh, Export_kWh ]]
-    .mean()
-    .reset_index()
-)
-
-importexport = importexport.rename(columns={DATE_COLUMN: "month"})
-
-fig_side = px.line(
-    importexport,
-    x="month",
-    y=[Import_kWh, Export_kWh],
-    title="Average Import/Export(by month of year)"
-)
-
-fig_side.update_layout(
-    xaxis_title="Hour of day (0–23)",
-    yaxis_title="Average Import/Export"
-)
-fig_side.show()
-
-#Dashboard layout design, setting the columns for the widgets to sit in, divider then lower row columns
-
-st.divider()
-
-# ----- LAYOUT: HOURLY CHARTS -----
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.plotly_chart(fig_hourly_import, use_container_width=True)
-
-with col2:
-    st.plotly_chart(fig_hourly_export, use_container_width=True)
-
-st.divider()
-
-# ----- LAYOUT: DAILY CHARTS -----
-
-col3, col4 = st.columns(2)
-
-with col3:
-    st.plotly_chart(fig_daily_import, use_container_width=True)
-
-with col4:
-    st.plotly_chart(fig_daily_export, use_container_width=True)
-
-st.divider()
-
-# ----- LAYOUT: MONTHLY CHARTS -----
-
-col5, col6 = st.columns(2)
-
-with col5:
-    st.plotly_chart(fig_monthly_import, use_container_width=True)
-
-with col6:
-    st.plotly_chart(fig_monthly_export, use_container_width=True)
-
-st.divider()
-
-# ----- LAYOUT: MONTHLY IMPORT / EXPORT / NET LINE -----
 
 st.plotly_chart(fig_import_export_line, use_container_width=True)
 
@@ -279,9 +216,3 @@ st.divider()
 
 if st.checkbox("Show Dataset Summary"):
     st.write(data.describe())
-#Data Summary details & addition of the checkbox 
-
-if st.checkbox("Show Dataset Summary"):
-    st.write(data.describe())
-
-
