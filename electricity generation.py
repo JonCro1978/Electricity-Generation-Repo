@@ -13,7 +13,7 @@ st.set_page_config(
 
 # ----- CONSTANTS -----
 
-DATA_PATH = "data/HDF_calckWh_sample_clean.csv"
+DATA_PATH = "data/HDF_calckWh_sample_clean.xlsx"
 
 MPRN_COL = "MPRN"
 METER_SERIAL_NUMBER = "Meter Serial Number"
@@ -25,7 +25,7 @@ DATE_COLUMN = "Read Date and End Time"  # this must match the CSV header exactly
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_PATH)
+   df = pd.read_excel(DATA_PATH)
     df.columns = df.columns.str.strip()  # remove spaces around column names
 
     # parse datetime
