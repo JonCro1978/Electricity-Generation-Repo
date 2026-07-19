@@ -13,7 +13,7 @@ st.set_page_config(
 
 # ----- CONSTANTS -----
 
-DATA_PATH = r"C:\Users\unake\Downloads\HDF_calckWh_10018112406_19-07-2026.csv"
+DATA_PATH = "data/HDF_calckWh_sample.csv"
 
 MPRN_COL = "MPRN"
 METER_SERIAL_NUMBER = "Meter Serial Number"
