@@ -13,7 +13,7 @@ st.set_page_config(
 
 # ----- CONSTANTS -----
 
-DATA_PATH = "data/HDF_calckWh_sample.csv"
+DATA_PATH = "data/HDF_calckWh_sample_clean.csv"
 
 MPRN_COL = "MPRN"
 METER_SERIAL_NUMBER = "Meter Serial Number"
