@@ -25,10 +25,8 @@ DATE_COLUMN = "Read Date and End Time"  # this must match the CSV header exactly
 
 @st.cache_data
 def load_data():
-   df = pd.read_excel(DATA_PATH)
+    df = pd.read_csv(DATA_PATH)
     df.columns = df.columns.str.strip()  # remove spaces around column names
-
-    # parse datetime
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
 
     # Import stays positive
@@ -44,6 +42,10 @@ def load_data():
         -df[TOTAL_READ_COL],
         0,
     )
+
+    df["Total_kWh"] = df["Import_kWh"] + df["Export_kWh"]
+
+    return df
 
     # Net import - export
     df["Total_kWh"] = df["Import_kWh"] + df["Export_kWh"]
