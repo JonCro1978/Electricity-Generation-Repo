@@ -27,19 +27,24 @@ DATE_COLUMN = "Read Date and End Time"  # this must match the CSV header exactly
 @st.cache_data
 def load_data():
     df = pd.read_csv(DATA_PATH)
-    df.columns = df.columns.str.strip()  # remove spaces around column names
+
+    # Clean up column names
+    df.columns = df.columns.str.strip()
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
+
+    # Clean up Read Type values (in case of spaces)
+    df[READ_TYPE_COL] = df[READ_TYPE_COL].astype(str).str.strip()
 
     # Import stays positive
     df["Import_kWh"] = np.where(
-        df[READ_TYPE_COL] == "Active Import Interval kWh",
+        df[READ_TYPE_COL] == "Active Import Interval (kWh)",
         df[TOTAL_READ_COL],
         0,
     )
 
     # Export becomes negative
     df["Export_kWh"] = np.where(
-        df[READ_TYPE_COL] == "Active Export Interval kWh",
+        df[READ_TYPE_COL] == "Active Export Interval (kWh)",
         -df[TOTAL_READ_COL],
         0,
     )
